@@ -364,11 +364,16 @@ def load_sep_data(batch_size=1, datadir="data"):
 def load_flare_train_trial(batch_size=1, datadir="..//..//..//..//Cleaned SWANSF Dataset//train"):
     import pickle
     print("Loading Data From {}".format(datadir))
-    f = open(".//train//Partition1_RUS-Tomek-TimeGAN_LSBZM-Norm_WithoutC_FPCKNN-impute.pkl", 'rb')
+    f = open(".//test//Partition2_LSBZM-Norm_FPCKNN-impute.pkl", 'rb')
     dat = pickle.load(f)
     f.close()
-    l = 18773
-    loc_train = dat.reshape((l, 24, 60))
+    l = dat.shape[0]
+    print("DAT SHAPE THO: ", dat.shape)
+
+    loc_train = torch.FloatTensor(dat)
+    loc_train = torch.transpose(loc_train, 1,2)
+
+    print("LOC SHAPE THO: ", loc_train.shape)
     loc_train = torch.Tensor(loc_train).unsqueeze(-1)
 
     edges_train = torch.ones((l, 24, 24))
@@ -387,7 +392,7 @@ def load_flare_train_trial(batch_size=1, datadir="..//..//..//..//Cleaned SWANSF
     train_data = TensorDataset(loc_train, edges_train)
 
     train_data_loader = DataLoader(
-        train_data, batch_size=batch_size, shuffle=True, num_workers=0
+        train_data, batch_size=batch_size, shuffle=False, num_workers=0
     )
 
     return (train_data_loader, loc_max, loc_min)

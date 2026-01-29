@@ -1,2 +1,10 @@
 test/
 train/
+*.png
+*.npy
+*.pyc
+*.mmap
+*.pkl
+*.log
+*.txt
+*.pt
