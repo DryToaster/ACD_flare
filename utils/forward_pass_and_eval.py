@@ -258,7 +258,7 @@ def forward_pass_and_eval(
     #################### MAIN LOSSES ####################
     ### latent losses ###
     losses["loss_kl"] = utils.kl_latent(args, prob, log_prior, predicted_atoms)
-    losses["acc"] = utils.edge_accuracy(logits, relations)
+    #losses["acc"] = utils.edge_accuracy(logits, relations)
     #losses["auroc"] = utils.calc_auroc(prob, relations)
 
     ### output losses ###
@@ -269,7 +269,9 @@ def forward_pass_and_eval(
     losses["loss_mse"] = F.mse_loss(output, target)
 
     total_loss = losses["loss_nll"] + losses["loss_kl"]
+
     total_loss += args.teacher_forcing * losses["mse_unobserved"]
+
     if args.global_temp:
         total_loss += losses['loss_kl_temp']
     losses["loss"] = total_loss

@@ -1,4 +1,6 @@
 import torch
+import torch.nn.functional as F
+import torch.nn as nn
 
 from model.modules import *
 
@@ -49,12 +51,11 @@ class MLPDecoder(nn.Module):
         senders = torch.matmul(rel_send, single_timestep_inputs)
         pre_msg = torch.cat([senders, receivers], dim=-1)
 
+        # Properly initialized with device argument here
         all_msgs = torch.zeros(
-            pre_msg.size(0), pre_msg.size(1), pre_msg.size(2), self.msg_out_shape
+            pre_msg.size(0), pre_msg.size(1), pre_msg.size(2), self.msg_out_shape,
+            device=pre_msg.device
         )
-
-        if single_timestep_inputs.is_cuda:
-            all_msgs = all_msgs.cuda()
 
         if self.skip_first_edge_type:
             start_idx = 1
@@ -87,6 +88,9 @@ class MLPDecoder(nn.Module):
 
     def forward(self, inputs, rel_type, rel_rec, rel_send, pred_steps=1):
         # NOTE: Assumes that we have the same graph across all samples.
+        if rel_rec.dim() == 3:
+            rel_rec = rel_rec.unsqueeze(1)
+            rel_send = rel_send.unsqueeze(1)
 
         inputs = inputs.transpose(1, 2).contiguous()
 
@@ -123,9 +127,8 @@ class MLPDecoder(nn.Module):
             preds[0].size(3),
         ]
 
-        output = torch.zeros(sizes)
-        if inputs.is_cuda:
-            output = output.cuda()
+        # Properly initialized with tuple(sizes) and device argument here
+        output = torch.zeros(tuple(sizes), device=inputs.device)
 
         # Re-assemble correct timeline
         for i in range(len(preds)):

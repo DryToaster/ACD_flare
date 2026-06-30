@@ -35,7 +35,6 @@ class Logger:
         args.log_path = os.path.join(args.save_folder, add_path_var, args.time).replace(":", ".")
 
         if not os.path.exists(args.log_path):
-            print(type(args.log_path))
             os.makedirs(args.log_path)
 
         if args.expername != "":
@@ -161,18 +160,22 @@ class Logger:
 
     def append_train_loss(self, loss):
         for k, v in loss.items():
-            self.train_losses.at[str(self.train_losses_idx), k] = np.mean(v)
+            # Safely extract float from PyTorch tensors
+            safe_v = [x.item() if torch.is_tensor(x) else x for x in v]
+            self.train_losses.loc[str(self.train_losses_idx), k] = np.mean(safe_v)
         self.train_losses_idx += 1
 
     def append_val_loss(self, val_loss):
         for k, v in val_loss.items():
-            self.val_losses.at[str(self.val_losses_idx), k] = np.mean(v)
+            safe_v = [x.item() if torch.is_tensor(x) else x for x in v]
+            self.val_losses.loc[str(self.val_losses_idx), k] = np.mean(safe_v)
         self.val_losses_idx += 1
 
     def append_test_loss(self, test_loss):
         for k, v in test_loss.items():
             if type(v) != defaultdict:
-                self.test_losses.at[str(self.test_losses_idx), k] = np.mean(v)
+                safe_v = [x.item() if torch.is_tensor(x) else x for x in v]
+                self.test_losses.loc[str(self.test_losses_idx), k] = np.mean(safe_v)
         self.test_losses_idx += 1
 
     def result_string(self, trainvaltest, epoch, losses, t=None):
@@ -190,11 +193,14 @@ class Logger:
             if type(value) == defaultdict:
                 string += loss + " "
                 for idx, elem in sorted(value.items()):
-                    string += str(idx) + ": {:.10f} \t".format(
-                        np.mean(list(itertools.chain.from_iterable(elem)))
-                    )
-            elif np.mean(value) != 0 and not math.isnan(np.mean(value)):
-                string += loss + " {:.10f} \t".format(np.mean(value))
+                    safe_elem = [x.item() if torch.is_tensor(x) else x for x in list(itertools.chain.from_iterable(elem))]
+                    string += str(idx) + ": {:.10f} \t".format(np.mean(safe_elem))
+            else:
+                safe_value = [x.item() if torch.is_tensor(x) else x for x in value]
+                mean_val = np.mean(safe_value)
+                # Removed the != 0 check so exact zeros are properly logged
+                if not math.isnan(mean_val):
+                    string += loss + " {:.10f} \t".format(mean_val)
 
         if t is not None:
             string += "time: {:.4f}s \t".format(time.time() - t)

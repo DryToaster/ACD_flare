@@ -49,7 +49,7 @@ class Encoder(nn.Module):
     def edge2node(self, x, rel_rec, rel_send):
         """Based on https://github.com/ethanfetaya/NRI (MIT License)."""
         # NOTE: Assumes that we have the same graph across all samples.
-        incoming = torch.matmul(rel_rec.t(), x)
+        incoming = torch.matmul(rel_rec.transpose(-2, -1), x)
         return incoming / incoming.size(1)
 
     def node2edge(self, x, rel_rec, rel_send):

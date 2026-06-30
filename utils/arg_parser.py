@@ -13,7 +13,7 @@ def parse_args():
 
     ############## training hyperparameter ##############
     parser.add_argument(
-        "--epochs", type=int, default=500, help="Number of epochs to train."
+        "--epochs", type=int, default=1, help="Number of epochs to train."
     )
     parser.add_argument(
         "--batch_size", type=int, default=128, help="Number of samples per batch."
@@ -149,7 +149,7 @@ def parse_args():
     parser.add_argument(
         "--suffix",
         type=str,
-        default="_springs5",
+        default="flare_trial",
         help='Suffix for training data.',
     )
     parser.add_argument(
@@ -278,8 +278,22 @@ def parse_args():
 
     if "sep" in args.suffix:
         args.dims = 1
-        args.num_atoms = 3
-        args.timesteps = 60
+        args.num_atoms = 10
+        args.timesteps = 288
+        args.no_validate = True
+        args.test = False
+
+    if "sep_12" in args.suffix:
+        args.dims = 1
+        args.num_atoms = 10
+        args.timesteps = 144
+        args.no_validate = True
+        args.test = False
+
+    if "sep_6" in args.suffix:
+        args.dims = 1
+        args.num_atoms = 10
+        args.timesteps = 72
         args.no_validate = True
         args.test = False
 
@@ -288,6 +302,13 @@ def parse_args():
         args.num_atoms = 24
         args.timesteps = 60
         args.no_validate = True
+        args.test = False
+
+    if "flare_diff" in args.suffix:
+        args.dims = 1
+        args.num_atoms = 24
+        args.timesteps = 59
+        args.no_validate = False
         args.test = False
 
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -306,7 +327,7 @@ def parse_args():
         if args.GPU_to_use is not None:
             torch.cuda.set_device(args.GPU_to_use)
         torch.cuda.manual_seed(args.seed)
-        args.num_GPU = 1  # torch.cuda.device_count()
+        args.num_GPU = torch.cuda.device_count()
         args.batch_size_multiGPU = args.batch_size * args.num_GPU
     else:
         args.num_GPU = None

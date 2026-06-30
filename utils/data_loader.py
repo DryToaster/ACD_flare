@@ -20,12 +20,26 @@ def load_data(args):
         train_loader, loc_max, loc_min = load_netsim_data(
             batch_size=args.batch_size_multiGPU, datadir=args.datadir
         )
-    elif "sep" in args.suffix:
-        train_loader, loc_max, loc_min = load_sep3_data(
+    elif "sep_bal" in args.suffix:
+
+        train_loader, loc_max, loc_min = load_sep_bal(
             batch_size=args.batch_size_multiGPU, datadir=args.datadir
+        )
+    elif "sep" in args.suffix:
+        window = 24
+        if "6" in args.suffix:
+            window = 6
+        elif "12" in args.suffix:
+            window = 12
+        train_loader, loc_max, loc_min = load_sep(
+            batch_size=args.batch_size_multiGPU, datadir=args.datadir, window=window
         )
     elif "flare_trial" in args.suffix:
         train_loader, loc_max, loc_min = load_flare_train_trial(
+            batch_size=args.batch_size_multiGPU, datadir=args.datadir
+        )
+    elif "flare_diff" in args.suffix:
+        train_loader, valid_loader, loc_max, loc_min = load_flare_diff(
             batch_size=args.batch_size_multiGPU, datadir=args.datadir
         )
     elif "springs" in args.suffix:
@@ -361,21 +375,76 @@ def load_sep_data(batch_size=1, datadir="data"):
 
     return (train_data_loader, loc_max, loc_min)
 
-def load_flare_train_trial(batch_size=1, datadir="..//..//..//..//Cleaned SWANSF Dataset//train"):
+def load_sep_bal(batch_size=1, datadir="./data"):
+    print("Loading Data From {}".format(datadir))
+    dat = np.load(os.path.join(datadir, "X_mvts_balanced.npy"))
+    l = 95
+    v = 10
+    n = 288
+    dat = dat.reshape(l, n, v)
+    loc_train = torch.FloatTensor(dat)
+    loc_train = torch.transpose(loc_train, 1, 2)
+    loc_train = loc_train.unsqueeze(-1)
+    edges_train = torch.ones((l, 10, 10))
+    for i in range(edges_train.shape[1]):
+        for j in range(edges_train.shape[0]):
+            edges_train[j][i][i] = 0
+    off_diag_idx = get_off_diag_idx(10)
+    edges_train = torch.reshape(edges_train, [-1, 10 ** 2])
+    edges_train = (edges_train + 1) // 2
+    edges_train = edges_train[:, off_diag_idx]
+    loc_max = loc_train.max()
+    loc_min = loc_train.min()
+    train_data = TensorDataset(loc_train, edges_train)
+    train_data_loader = DataLoader(
+        train_data, batch_size=batch_size, shuffle=True, num_workers=8
+    )
+
+    return (train_data_loader, loc_max, loc_min)
+
+def load_sep(batch_size=1, datadir="./data", window=24):
+    print("Loading Data From {}".format(datadir))
+    dat = np.load(os.path.join(datadir, "seplog.npy"))
+    l = 17794
+    v = 10
+    n = 288
+    if window==12:
+        n = 144
+        dat = dat[:, 144:, :]
+    elif window==6:
+        n = 72
+        dat = dat[:, 216:, :]
+    dat = dat.reshape(l, n, v)
+    loc_train = torch.FloatTensor(dat)
+    loc_train = torch.transpose(loc_train, 1, 2)
+    loc_train = loc_train.unsqueeze(-1)
+    edges_train = torch.ones((l, 10, 10))
+    for i in range(edges_train.shape[1]):
+        for j in range(edges_train.shape[0]):
+            edges_train[j][i][i] = 0
+    off_diag_idx = get_off_diag_idx(10)
+    edges_train = torch.reshape(edges_train, [-1, 10 ** 2])
+    edges_train = (edges_train + 1) // 2
+    edges_train = edges_train[:, off_diag_idx]
+    loc_max = loc_train.max()
+    loc_min = loc_train.min()
+    train_data = TensorDataset(loc_train, edges_train)
+    train_data_loader = DataLoader(
+        train_data, batch_size=batch_size, shuffle=True, num_workers=8
+    )
+
+    return (train_data_loader, loc_max, loc_min)
+
+def load_flare_train_trial(batch_size=1, datadir="..//..//..//..//Cleaned_SWANSF_Dataset//train"):
     import pickle
     print("Loading Data From {}".format(datadir))
-    f = open(".//test//Partition2_LSBZM-Norm_FPCKNN-impute.pkl", 'rb')
+    f = open("..//..//..//Cleaned_SWANSF_Dataset//train//Partition1_RUS-Tomek-TimeGAN_LSBZM-Norm_WithoutC_FPCKNN-impute.pkl", 'rb')
     dat = pickle.load(f)
     f.close()
-    l = dat.shape[0]
-    print("DAT SHAPE THO: ", dat.shape)
-
+    l = 18773
     loc_train = torch.FloatTensor(dat)
-    loc_train = torch.transpose(loc_train, 1,2)
-
-    print("LOC SHAPE THO: ", loc_train.shape)
-    loc_train = torch.Tensor(loc_train).unsqueeze(-1)
-
+    loc_train = torch.transpose(loc_train, 1, 2)
+    loc_train = loc_train.unsqueeze(-1)
     edges_train = torch.ones((l, 24, 24))
     for i in range(edges_train.shape[1]):
         for j in range(edges_train.shape[0]):
@@ -387,15 +456,71 @@ def load_flare_train_trial(batch_size=1, datadir="..//..//..//..//Cleaned SWANSF
     edges_train = edges_train[:, off_diag_idx]
     loc_max = loc_train.max()
     loc_min = loc_train.min()
-    print(loc_train.shape)
-    print(edges_train.shape)
     train_data = TensorDataset(loc_train, edges_train)
 
     train_data_loader = DataLoader(
-        train_data, batch_size=batch_size, shuffle=False, num_workers=0
+        train_data, batch_size=batch_size, shuffle=True, num_workers=8
     )
 
     return (train_data_loader, loc_max, loc_min)
+
+def load_flare_diff(batch_size=1, datadir="..//..//..//..//Cleaned_SWANSF_Dataset"):
+    import pickle
+    import os
+    print("Loading Data From {}".format(datadir))
+    
+    # --- 1. LOAD TRAINING DATA ---
+    f_train = open(os.path.join(datadir, "train", "diff1.pkl"), 'rb')
+    dat_train = pickle.load(f_train)
+    f_train.close()
+    
+    l_train = dat_train.shape[0] 
+    loc_train = torch.FloatTensor(dat_train)
+    loc_train = torch.transpose(loc_train, 1, 2).unsqueeze(-1)
+    
+    edges_train = torch.ones((l_train, 24, 24))
+    for i in range(edges_train.shape[1]):
+        for j in range(edges_train.shape[0]):
+            edges_train[j][i][i] = 0
+            
+    off_diag_idx = get_off_diag_idx(24)
+    edges_train = torch.reshape(edges_train, [-1, 24 ** 2])
+    edges_train = (edges_train + 1) // 2
+    edges_train = edges_train[:, off_diag_idx]
+    
+    train_data = TensorDataset(loc_train, edges_train)
+    train_data_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=8)
+
+    # --- 2. LOAD VALIDATION DATA ---
+    # UPDATE THIS PATH to point to your validation pickle file
+    valid_path = os.path.join(datadir, "test", "diff2.pkl") 
+    f_valid = open(valid_path, 'rb')
+    dat_valid = pickle.load(f_valid)
+    f_valid.close()
+    
+    l_valid = dat_valid.shape[0]
+    loc_valid = torch.FloatTensor(dat_valid)
+    loc_valid = torch.transpose(loc_valid, 1, 2).unsqueeze(-1)
+    
+    edges_valid = torch.ones((l_valid, 24, 24))
+    for i in range(edges_valid.shape[1]):
+        for j in range(edges_valid.shape[0]):
+            edges_valid[j][i][i] = 0
+            
+    edges_valid = torch.reshape(edges_valid, [-1, 24 ** 2])
+    edges_valid = (edges_valid + 1) // 2
+    edges_valid = edges_valid[:, off_diag_idx]
+    
+    valid_data = TensorDataset(loc_valid, edges_valid)
+    # Shuffle is usually False for validation sets
+    valid_data_loader = DataLoader(valid_data, batch_size=batch_size, shuffle=False, num_workers=8)
+
+    # --- 3. MIN/MAX ---
+    # Max/min should strictly be calculated on the train set to avoid data leakage
+    loc_max = loc_train.max()
+    loc_min = loc_train.min()
+
+    return (train_data_loader, valid_data_loader, loc_max, loc_min)
 
 def load_sep3_data(batch_size=1, datadir="data"):
     from glob import glob
@@ -421,9 +546,7 @@ def load_sep3_data(batch_size=1, datadir="data"):
     edges_train = edges_train[:, off_diag_idx]
     loc_max = loc_train.max()
     loc_min = loc_train.min()
-    print(loc_train.shape)
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    print(edges_train)
+
     train_data = TensorDataset(loc_train, edges_train)
 
     train_data_loader = DataLoader(

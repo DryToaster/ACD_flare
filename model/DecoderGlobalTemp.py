@@ -19,7 +19,6 @@ class MLPDecoderGlobalTemp(nn.Module):
     ):
         super(MLPDecoderGlobalTemp, self).__init__()
         self.msg_fc1 = nn.ModuleList(
-            # [nn.Linear(2 * n_in_node + latent_dim, msg_hid) for _ in range(edge_types)]
             [nn.Linear(2 * n_in_node, msg_hid) for _ in range(edge_types)]
         )
         self.msg_fc2 = nn.ModuleList(
@@ -56,12 +55,11 @@ class MLPDecoderGlobalTemp(nn.Module):
         senders = torch.matmul(rel_send, single_timestep_inputs)
         pre_msg = torch.cat([senders, receivers], dim=-1)
 
+        # Properly initialized with device argument here
         all_msgs = torch.zeros(
-            pre_msg.size(0), pre_msg.size(1), pre_msg.size(2), self.msg_out_shape
+            pre_msg.size(0), pre_msg.size(1), pre_msg.size(2), self.msg_out_shape,
+            device=pre_msg.device
         )
-
-        if single_timestep_inputs.is_cuda:
-            all_msgs = all_msgs.cuda()
 
         if self.skip_first_edge_type:
             start_idx = 1
@@ -130,9 +128,8 @@ class MLPDecoderGlobalTemp(nn.Module):
             preds[0].size(3),
         ]
 
-        output = torch.zeros(sizes)
-        if inputs.is_cuda:
-            output = output.cuda()
+        # Properly initialized with tuple(sizes) and device argument here
+        output = torch.zeros(tuple(sizes), device=inputs.device)
 
         # Re-assemble correct timeline
         for i in range(len(preds)):
@@ -171,11 +168,13 @@ class SimulationDecoderGlobalTemp(SimulationDecoder):
         loc, vel = self.unnormalize(loc, vel)
 
         offdiag_indices = utils.get_offdiag_indices(inputs.size(1))
-        edges = torch.zeros(relations.size(0), inputs.size(1) * inputs.size(1))
+        
+        # Properly initialized with device argument here
+        edges = torch.zeros(relations.size(0), inputs.size(1) * inputs.size(1), device=inputs.device)
 
         if inputs.is_cuda:
-            edges = edges.cuda()
-            offdiag_indices = offdiag_indices.cuda()
+            # Safely move offdiag_indices to the current executing device
+            offdiag_indices = offdiag_indices.to(inputs.device)
 
         edges[:, offdiag_indices] = relations.float()
 
