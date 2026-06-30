@@ -8,3 +8,4 @@ train/
 *.log
 *.txt
 *.pt
+*.csv

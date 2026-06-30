@@ -53,6 +53,8 @@ train_iter = iter(train_loader)
 feats = ['R_VALUE', 'TOTUSJH', 'TOTBSQ', 'TOTPOT', 'TOTUSJZ', 'ABSNJZH', 'SAVNCPP', 'USFLUX', 'TOTFZ', 'MEANPOT', 'EPSX',
  'EPSY', 'EPSZ', 'MEANSHR', 'SHRGT45', 'MEANGAM', 'MEANGBT', 'MEANGBZ', 'MEANGBH', 'MEANJZH', 'TOTFY', 'MEANJZD', 'MEANALP', 'TOTFX']
 sd = torch.load("encoder.pt")
+for key, value in sd.items():
+    print(f"Layer name: {key} | Shape: {value.shape}")
 encoder.load_state_dict(sd)
 if isinstance(encoder, torch.nn.DataParallel):
     encoder = encoder.module
