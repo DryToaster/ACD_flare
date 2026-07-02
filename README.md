@@ -23,13 +23,13 @@ Sindy Löwe*, David Madras*, Richard Zemel, Max Welling - [Amortized Causal Disc
     cd codebase
     ```
 
-Causality-Aware Multivariate Time Series Classification for Solar Flare Prediction
+## Causality-Aware Multivariate Time Series Classification for Solar Flare Prediction
 
 This repository contains the official code implementation for predicting solar flares using Amortized Causal Discovery (ACD) and the CAIformer/GC-xLSTM architectures on the SWAN-SF dataset.
 
 By decoupling causal graph generation from temporal sequence modeling, we extract the underlying magnetic field interactions (causal graphs) and utilize them to improve downstream binary classification performance (Flare vs. No-Flare).
 
-Repository Structure
+### Repository Structure
 
 stationarity.py: Analyzes the original time series data for stationarity using parallelized Augmented Dickey-Fuller (ADF) tests.
 
@@ -49,11 +49,11 @@ pipeline-EVAL.py: The main evaluation pipeline. Trains and evaluates baseline MV
 
 train.py: Trains a model using the ACD framework
 
-Step 1: Data Sourcing & Preprocessing
+### Step 1: Data Sourcing & Preprocessing
 
 This project uses the SWAN-SF (Space Weather Analytics for Solar Flares) dataset. We specifically utilize the preprocessed and optimized version available at the Cleaned-SWANSF-Dataset repository.
 
-1. Acquire the Base Data:
+#### 1. Acquire the Base Data:
 The dataset from the repository above comes fully prepared for binary classification tasks (Flare vs. No-Flare). It features several robust preprocessing steps:
 
 Imputation: FPCKNN technique.
@@ -66,7 +66,7 @@ Normalization: LSBZM normalization.
 
 Download the 3D .pkl files from their repository. The data features 24 attributes and is shaped as (num_samples, num_timestamps, num_attributes). Tip: You can use perc.py to quickly verify the label balance of the partitions you download.
 
-2. Test for Stationarity:
+#### 2. Test for Stationarity:
 Before feeding data into the causal discovery models, we must ensure it meets the stationarity assumptions required by autoregressive models. Use stationarity.py to run Augmented Dickey-Fuller (ADF) tests across all variables in your partitions.
 
 python stationarity.py
@@ -82,7 +82,7 @@ python diff.py
 
 
 
-Step 2: Training Amortized Causal Discovery (ACD)
+### Step 2: Training Amortized Causal Discovery (ACD)
 
 With the stationary (differenced) dataset ready, train the ACD model to learn the causal interactions between the 24 magnetic field variables. We train this using the --flare_diff suffix to point to the correct dataset, define model structure, and set default hyperparameters.
 
@@ -98,11 +98,11 @@ python -m train \
 
 (See the paper/appendix for the full list of ACD hyperparameters).
 
-Step 3: Graph Analysis & Visualization
+### Step 3: Graph Analysis & Visualization
 
 Before running downstream classifiers, we analyze the causal structures learned by the ACD model to ensure they capture meaningful physical interactions.
 
-1. Generate Visual Charts:
+#### 1. Generate Visual Charts:
 Run graph-analysis.py to produce visualizations of the graphs extracted from the test set.
 
 python graph-analysis.py
@@ -121,7 +121,7 @@ Whole-graph density and reciprocity distributions.
 
 (Note: You can also use make-discrete.py for a quick standalone extraction and heatmap visualization of a single partition using standard or hidden-variable models).
 
-2. Execute Statistical Tests:
+#### 2. Execute Statistical Tests:
 Run graph-statistics.py to quantify the statistical significance of the visual differences.
 
 python graph-statistics.py
@@ -136,7 +136,7 @@ Variable-Level Metrics: Kolmogorov-Smirnov (K-S) Tests for node-specific Out-Deg
 
 Outputs are printed to the console and saved to variable_ks_tests.csv.
 
-Step 4: Creating Experimental Splits
+### Step 4: Creating Experimental Splits
 
 To prepare for downstream classification, we must generate the static graph datasets (both discrete and continuous) for every data split.
 
@@ -154,7 +154,7 @@ train_discrete.npy / test_discrete.npy (Hard edge classifications, 0 or 1)
 
 train_continuous.npy / test_continuous.npy (Soft edge probabilities, 0.0 to 1.0)
 
-Step 5: Downstream Classification & Evaluation
+### Step 5: Downstream Classification & Evaluation
 
 With the MVTS data and the ACD-generated graphs ready, you can execute the final experiment.
 
